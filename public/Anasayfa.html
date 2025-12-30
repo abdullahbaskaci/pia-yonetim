@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <script>
+        const userRole = localStorage.getItem('userRole');
+        if (!userRole) { window.location.href = 'login.html'; }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pia Yönetim | Mobil Uyumlu Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #fdfdfd; color: #1e293b; overflow: hidden; }
+        .bg-blob { position: absolute; width: 500px; height: 500px; border-radius: 50%; filter: blur(80px); z-index: -1; opacity: 0.12; pointer-events: none; }
+        .blob-1 { background: #6366f1; top: -100px; left: -100px; }
+        .blob-2 { background: #f59e0b; bottom: -100px; right: -100px; }
+        
+        /* Sidebar Glassmorphism */
+        .glass-sidebar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .sidebar-link { transition: all 0.3s ease; border-radius: 16px; color: #64748b; font-weight: 600; }
+        .sidebar-link:hover { background: #f1f5f9; color: #4f46e5; }
+        .active-link { background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%) !important; color: white !important; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3); }
+
+        /* Mobil Sidebar Geçiş Efekti */
+        #sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        @media (max-width: 1024px) {
+            #sidebar { transform: translateX(-100%); position: fixed; height: 100%; top: 0; left: 0; }
+            #sidebar.open { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 hidden lg:hidden"></div>
+
+  <aside id="sidebar" class="w-72 glass-sidebar border-r border-slate-100 flex flex-col shrink-0 p-6 z-40">
+        <div class="flex items-center justify-between mb-10 px-2">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 flex items-center justify-center overflow-hidden">
+                    <img src="pialogo.png" alt="Pia Logo" class="w-full h-full object-contain">
+                </div>
+                <div>
+                    <h1 class="text-lg font-extrabold tracking-tight text-slate-800 leading-none">PIA <span class="text-indigo-600">YAZILIM</span></h1>
+                    <p class="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">Site Yönetim Sistemi</p>
+                </div>
+            </div>
+            <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 hover:text-slate-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <nav class="flex-grow space-y-1.5">
+            <a href="adminhome.html" target="icerik_alani" onclick="handleLinkClick(this)" class="sidebar-link active-link flex items-center gap-3 py-3 px-5 text-sm nav-item">
+                <i class="fas fa-th-large w-5"></i> Genel Bakış
+            </a>
+
+            <div id="admin-menu" class="space-y-1.5">
+                <a href="site_tanimlar.html" target="icerik_alani" onclick="handleLinkClick(this)" class="sidebar-link flex items-center gap-3 py-3 px-5 text-sm nav-item">
+                    <i class="fas fa-city w-5 opacity-70"></i> Site & Bloklar
+                </a>
+                <a href="finans.html" target="icerik_alani" onclick="handleLinkClick(this)" class="sidebar-link flex items-center gap-3 py-3 px-5 text-sm nav-item">
+                    <i class="fas fa-wallet w-5 opacity-70"></i> Finans Yönetimi
+                </a>
+            </div>
+
+            <a href="belge_yonetimi.html" target="icerik_alani" onclick="handleLinkClick(this)" class="sidebar-link flex items-center gap-3 py-3 px-5 text-sm nav-item">
+                <i class="fas fa-file-alt w-5 opacity-70"></i> Belge Arşivi
+            </a>
+        </nav>
+
+        <div class="mt-auto pt-4 border-t border-slate-100">
+            <button onclick="logout()" class="w-full py-4 bg-red-50 text-red-500 rounded-2xl text-[11px] font-black hover:bg-red-500 hover:text-white transition-all uppercase tracking-widest shadow-sm shadow-red-100/50">
+                <i class="fas fa-sign-out-alt mr-2 text-xs"></i> Güvenli Çıkış
+            </button>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col min-w-0">
+        <header class="lg:hidden h-16 bg-white border-b border-slate-100 flex items-center justify-between px-6 shrink-0 z-20">
+            <button onclick="toggleSidebar()" class="w-10 h-10 flex items-center justify-center bg-slate-50 rounded-xl text-slate-600">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="text-sm font-black text-slate-800 uppercase tracking-tighter">Pia Yönetim</span>
+            <div class="w-10"></div> </header>
+
+        <main class="flex-1 bg-slate-50/30 relative">
+            <iframe name="icerik_alani" src="adminhome.html" class="w-full h-full border-none relative z-10"></iframe>
+        </main>
+    </div>
+
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+
+        // Sidebar Aç/Kapat (Mobil)
+        function toggleSidebar() {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('hidden');
+        }
+
+        // Linke tıklayınca (Mobil) menüyü kapat ve aktifliği değiştir
+        function handleLinkClick(element) {
+            // Aktif link rengini değiştir
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active-link'));
+            element.classList.add('active-link');
+
+            // Eğer mobildeyse menüyü kapat
+            if (window.innerWidth < 1024) {
+                toggleSidebar();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const role = localStorage.getItem('userRole');
+            const name = localStorage.getItem('userName') || 'Yönetici';
+            
+            document.getElementById('userNameDisplay').innerText = name;
+            document.getElementById('userRoleDisplay').innerText = role === 'admin' ? 'Yönetici' : 'Sakin';
+
+            if (role !== 'admin') {
+                const adminMenu = document.getElementById('admin-menu');
+                if (adminMenu) adminMenu.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

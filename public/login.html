@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pia Yönetim | Giriş</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+        }
+
+        .brand-gradient-bg {
+            background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
+        }
+
+        .input-focus-effect:focus {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        .logo-glow {
+            filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.3));
+        }
+    </style>
+</head>
+<body class="h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-4xl w-full flex bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden border border-gray-100 min-h-[600px]">
+        
+        <div class="hidden md:flex md:w-1/2 brand-gradient-bg p-12 flex-col justify-between text-white relative overflow-hidden">
+            <div class="relative z-10 text-center md:text-left">
+                <div class="mb-8 inline-block p-4 bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 logo-glow">
+                    <img src="pialogo.png" alt="Pia Logo" class="w-20 h-20 object-contain">
+                </div>
+                
+                <h1 class="text-4xl font-extrabold mb-4 tracking-tight leading-tight">
+                    Pia <span class="text-orange-400">Yönetim</span>
+                </h1>
+                <p class="text-indigo-100 text-lg font-light leading-relaxed">
+                    Modern site ve apartman yönetiminde yeni nesil deneyim.
+                </p>
+            </div>
+            
+            <div class="space-y-4 relative z-10">
+                <div class="flex items-center space-x-4 p-3 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                    <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
+                        <i class="fas fa-check-double text-sm"></i>
+                    </div>
+                    <span class="text-sm font-medium">Şeffaf Aidat ve Borç Takibi</span>
+                </div>
+                <div class="flex items-center space-x-4 p-3 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                    <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400">
+                        <i class="fas fa-bolt text-sm"></i>
+                    </div>
+                    <span class="text-sm font-medium">Hızlı Arıza ve İstek Bildirimi</span>
+                </div>
+                <div class="flex items-center space-x-4 p-3 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                    <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-300">
+                        <i class="fas fa-shield-halved text-sm"></i>
+                    </div>
+                    <span class="text-sm font-medium">Güvenli Veri Altyapısı</span>
+                </div>
+            </div>
+
+            <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="w-full md:w-1/2 p-8 md:p-16 flex flex-col justify-center bg-white">
+            <div class="mb-10">
+                <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight">Hoş Geldiniz</h2>
+                <p class="text-slate-500 mt-2 text-sm font-medium">Lütfen bilgilerinizi kullanarak giriş yapın.</p>
+            </div>
+
+            <form id="loginForm" class="space-y-6">
+                <div class="group">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-indigo-600 transition-colors">Kullanıcı Adı</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                            <i class="fas fa-user-circle"></i>
+                        </span>
+                        <input type="text" id="username" required 
+                               class="block w-full pl-11 pr-4 py-4 border-2 border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all bg-slate-50/50 input-focus-effect font-medium"
+                               placeholder="Kullanıcı adınız">
+                    </div>
+                </div>
+
+                <div class="group">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-indigo-600 transition-colors">Şifre</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                            <i class="fas fa-lock-open"></i>
+                        </span>
+                        <input type="password" id="password" required 
+                               class="block w-full pl-11 pr-4 py-4 border-2 border-slate-100 rounded-2xl outline-none focus:border-indigo-500 transition-all bg-slate-50/50 input-focus-effect font-medium"
+                               placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div id="errorMessage" class="hidden animate-pulse text-red-600 text-xs text-center bg-red-50 p-4 rounded-xl border border-red-100 font-bold"></div>
+
+                <button type="submit" id="loginBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-4 rounded-2xl transition-all transform active:scale-[0.98] shadow-xl shadow-indigo-100 flex items-center justify-center space-x-3 mt-4 group">
+                    <span>SİSTEME GİRİŞ YAP</span>
+                    <i class="fas fa-arrow-right text-sm group-hover:translate-x-1 transition-transform"></i>
+                </button>
+            </form>
+            
+            <div class="mt-12 flex flex-col items-center">
+                <div class="h-1 w-8 bg-indigo-100 rounded-full mb-4"></div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-[0.3em] font-bold">Pia Software © 2025</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const usernameInput = document.getElementById('username').value.trim();
+            const passwordInput = document.getElementById('password').value;
+            const errorDiv = document.getElementById('errorMessage');
+            const loginBtn = document.getElementById('loginBtn');
+
+            // --- MD5 DÖNÜŞTÜRME ---
+            // Girilen şifreyi MD5 formatına çeviriyoruz
+            const hashedPassword = CryptoJS.MD5(passwordInput).toString();
+
+            // UI Hazırlığı
+            errorDiv.classList.add('hidden');
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<i class="fas fa-circle-notch animate-spin"></i> <span>Kimlik Doğrulanıyor...</span>';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // Sunucuya ham şifre yerine MD5'li şifreyi gönderiyoruz
+                    body: JSON.stringify({ username: usernameInput, password: hashedPassword })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) { 
+                    const userDisplayName = data.sakin_ad_soyad || data.username || 'Kullanıcı';
+
+                    localStorage.setItem('fullName', userDisplayName); 
+                    localStorage.setItem('userRole', data.role.toLowerCase());
+                    localStorage.setItem('userId', data.id);
+                    localStorage.setItem('site_adi', data.site_adi || 'Pia Yönetim');
+                    localStorage.setItem('blok_adi', data.blok_adi || '-');
+                    localStorage.setItem('daire_no', data.daire_no || '-');
+
+                    loginBtn.classList.replace('bg-indigo-600', 'bg-emerald-500');
+                    loginBtn.innerHTML = '<i class="fas fa-check-circle"></i> <span>Giriş Başarılı!</span>';
+
+                    setTimeout(() => {
+                        window.location.href = data.role.toLowerCase() === 'admin' ? 'Anasayfa.html' : 'sakin-panel.html';
+                    }, 800);
+
+                } else {
+                    throw new Error(data.message || 'Kullanıcı adı veya şifre hatalı!');
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+                resetBtn();
+            }
+        });
+
+        function resetBtn() {
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = false;
+            btn.innerHTML = '<span>SİSTEME GİRİŞ YAP</span> <i class="fas fa-arrow-right text-sm"></i>';
+        }
+    </script>
+</body>
+</html>

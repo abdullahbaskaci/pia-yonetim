@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pia | Finans & Muhasebe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; background-color: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 50; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        .modal.active { display: flex; }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        tr.selected-row { background-color: #eff6ff !important; border-left: 4px solid #4f46e5; }
+        .btn-hover-effect { transition: transform 0.1s ease, box-shadow 0.2s ease; }
+        .btn-hover-effect:active { transform: scale(0.96); }
+
+        .sort-menu { position: absolute; z-index: 1000; background: white; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-radius: 8px; width: 180px; display: none; }
+        .sort-menu-item { padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: #475569; cursor: pointer; transition: background 0.2s; }
+        .sort-menu-item:hover { background-color: #f1f5f9; color: #4f46e5; }
+        .sort-menu-item i { width: 16px; color: #94a3b8; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-24 bg-white border-b border-slate-200 flex items-center px-8 shrink-0">
+            <div class="flex flex-1 items-center justify-between pr-10">
+                <div class="text-center px-2">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">MEVCUT KASA</p>
+                    <h2 id="toplamKasa" class="text-2xl font-black text-emerald-600 tracking-tighter italic">₺0,00</h2>
+                </div>
+                <div class="h-10 w-px bg-slate-200"></div>
+                <div class="text-center px-2">
+                    <p class="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">TOPLAM ALACAK</p>
+                    <h2 id="beklenenAlacak" class="text-lg font-extrabold text-rose-600 italic">₺0,00</h2>
+                </div>
+                <div class="h-10 w-px bg-slate-200"></div>
+                <div class="text-center px-4 bg-indigo-50/50 py-2 rounded-2xl border border-indigo-100 min-w-[160px]">
+                    <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">GENEL TOPLAM</p>
+                    <h2 id="hedefKasa" class="text-2xl font-black text-indigo-700 tracking-tighter italic">₺0,00</h2>
+                </div>
+                <div class="h-10 w-px bg-slate-200"></div>
+                <div class="text-center px-2">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">DETAYLI BEKLEYEN</p>
+                    <div class="flex gap-3 justify-center">
+                        <span id="bekleyenAidat" class="text-[10px] font-bold text-rose-500 italic">Aidat: ₺0</span>
+                        <span id="bekleyenDemirbas" class="text-[10px] font-bold text-rose-500 italic">Demirbaş: ₺0</span>
+                        <span id="bekleyenYakit" class="text-[10px] font-bold text-rose-500 italic">Yakıt: ₺0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ml-6 flex items-center gap-3">
+                <button id="bulkDeleteBtn" onclick="topluSil()" class="hidden bg-rose-600 hover:bg-rose-700 text-white px-5 py-3 rounded-xl text-xs font-bold shadow-lg btn-hover-effect uppercase italic flex items-center gap-2">
+                    <i class="fas fa-trash-alt"></i> Seçilenleri Sil (<span id="selectedCount">0</span>)
+                </button>
+                <button onclick="openBorcModal()" class="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-xl text-xs font-bold shadow-lg btn-hover-effect uppercase italic flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Borç Tanımla
+                </button>
+                
+            </div>
+        </header>
+
+        <div class="p-8 overflow-y-auto space-y-6 custom-scrollbar">
+            <div class="bg-white rounded-2xl border border-slate-100 card-shadow overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/30 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-4 flex-1">
+                        <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider italic">Finansal Hareketler</span>
+                        <div class="relative flex-1 max-w-xs">
+    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+    
+    <input type="text" id="searchInput" oninput="filterTable()" 
+           placeholder="Arama yapın..." 
+           class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 transition">
+</div>
+  <select id="typeFilter" onchange="filterTable()" class="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-semibold">
+                            <option value="">Tüm Türler</option>
+                            <option value="Aidat">Aidat</option>
+                            <option value="Demirbaş">Demirbaş</option>
+                            <option value="Yakıt">Yakıt</option>
+                        </select>
+                        <select id="statusFilter" onchange="filterTable()" class="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-semibold">
+                            <option value="">Tüm Durumlar</option>
+                            <option value="Ödendi">Ödendi</option>
+                            <option value="Ödenmedi">Ödenmedi</option>
+                        </select>
+                    </div>
+                    <button onclick="printTable()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-3 rounded-xl text-xs font-bold shadow-sm btn-hover-effect uppercase italic flex items-center gap-2">
+    <i class="fas fa-print"></i> Listeyi Yazdır
+</button>
+                    <div class="text-[10px] font-black text-slate-400 uppercase italic">
+                        <span id="rowCount" class="text-indigo-600">0</span> Kayıt Listeleniyor
+                    </div>
+                    
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full" id="mainFinanceTable">
+                        <thead>
+                            <tr class="text-slate-400 text-[10px] uppercase font-black italic border-b border-slate-100">
+                                <th class="px-6 py-4 text-left w-10"><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
+                                <th onclick="showSortMenu(event, 'tarih')" class="px-6 py-4 text-left cursor-pointer hover:text-indigo-600">Kayıt Tarihi <i class="fas fa-sort ml-1 opacity-30"></i></th>
+                                <th onclick="showSortMenu(event, 'donem')" class="px-6 py-4 text-left cursor-pointer hover:text-indigo-600">Dönem <i class="fas fa-sort ml-1 opacity-30"></i></th>
+                               <th onclick="showSortMenu(event, 'blok')" class="px-6 py-4 text-left cursor-pointer hover:text-indigo-600">Blok/Daire <i class="fas fa-sort ml-1 opacity-30"></i></th>
+<th onclick="showSortMenu(event, 'sakin')" class="px-6 py-4 text-left cursor-pointer hover:text-indigo-600">Sakin <i class="fas fa-sort ml-1 opacity-30"></i></th>
+<th onclick="showSortMenu(event, 'tur')" class="px-6 py-4 text-left cursor-pointer hover:text-indigo-600">Tür <i class="fas fa-sort ml-1 opacity-30"></i></th>
+                                <th class="px-6 py-4 text-left">Açıklama</th>
+                                <th onclick="showSortMenu(event, 'tutar')" class="px-6 py-4 text-left cursor-pointer hover:text-indigo-600">Tutar <i class="fas fa-sort ml-1 opacity-30"></i></th>
+                                <th onclick="showSortMenu(event, 'durum')" class="px-6 py-4 text-left cursor-pointer hover:text-indigo-600">Durum <i class="fas fa-sort ml-1 opacity-30"></i></th>
+                                <th class="px-6 py-4 text-right">Aksiyon</th>
+                            </tr>
+                        </thead>
+                        <tbody id="borcTableBody" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="borcModal" class="modal">
+        <div class="bg-white rounded-3xl w-full max-w-md overflow-hidden card-shadow">
+            <div class="px-8 py-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h3 class="font-black text-slate-800 text-xs uppercase tracking-widest italic">Yeni Borç Tanımla</h3>
+                <button onclick="toggleModal('borcModal', false)" class="text-slate-300 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <form id="borcForm" class="p-8 space-y-5">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase italic mb-2 ml-1">Daire Seçimi</label>
+                    <select id="modalDaireSelect" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-sm text-slate-700 focus:ring-2 focus:ring-indigo-500"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase italic mb-2 ml-1">Borç Türü</label>
+                        <select id="modalTur" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-sm text-slate-700">
+                            <option value="Aidat">Aidat</option>
+                            <option value="Demirbaş">Demirbaş</option>
+                            <option value="Yakıt">Yakıt</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase italic mb-2 ml-1">Miktar (₺)</label>
+                        <input type="number" id="modalMiktar" required step="0.01" placeholder="0.00" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-sm text-slate-700">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase italic mb-2 ml-1">Açıklama</label>
+                    <input type="text" id="modalAciklama" required placeholder="Açıklama yazınız..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-sm text-slate-700">
+                </div>
+                <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-black rounded-xl shadow-lg hover:bg-indigo-700 transition-all uppercase italic tracking-widest text-xs">BORCU KAYDET</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="odemeSecimModal" class="modal">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative text-center">
+            <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-wallet text-xl"></i>
+            </div>
+            <h3 class="text-sm font-black text-slate-800 italic uppercase tracking-widest">Ödeme Yöntemi Seçin</h3>
+            <p id="secilenBorcBilgi" class="text-[11px] font-bold text-slate-400 italic mt-1 uppercase mb-6"></p>
+            <div class="space-y-3">
+                <button onclick="tahsilatOnayla('Nakit')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 text-xs uppercase italic"><i class="fas fa-money-bill-wave"></i> Nakit</button>
+                <button onclick="tahsilatOnayla('Banka')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 text-xs uppercase italic"><i class="fas fa-university"></i> Havale / EFT</button>
+                <button onclick="toggleModal('odemeSecimModal', false)" class="w-full py-3 text-slate-400 font-bold text-xs uppercase">Vazgeç</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl text-center">
+            <h3 class="text-lg font-black text-slate-800 italic uppercase tracking-widest mb-2">Emin misiniz?</h3>
+            <p id="confirmMessage" class="text-xs font-bold text-slate-500 italic mb-8">Bu işlem geri alınamaz.</p>
+            <div class="flex gap-3">
+                <button id="confirmCancelBtn" class="flex-1 py-4 bg-slate-100 text-slate-500 font-black rounded-xl text-[10px] uppercase italic">VAZGEÇ</button>
+                <button id="confirmApproveBtn" class="flex-1 py-4 bg-rose-600 text-white font-black rounded-xl text-[10px] uppercase italic">EVET, ONAYLA</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sortMenu" class="sort-menu"></div>
+
+   <script>
+    let aktifBorcId = null;
+    let aktifMiktar = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        refreshData();
+        document.addEventListener('click', () => { document.getElementById('sortMenu').style.display = 'none'; });
+    });
+async function topluSil() {
+    // 1. Tablodaki tüm seçili checkbox'ları bul ve ID'lerini al
+    const seciliCheckbxlar = document.querySelectorAll('.row-checkbox:checked');
+    const idler = Array.from(seciliCheckbxlar).map(cb => cb.value);
+
+    // 2. Eğer seçim yoksa işlemi durdur
+    if (idler.length === 0) return;
+
+    // 3. Kullanıcıdan onay al
+    const onay = await customConfirm(`${idler.length} adet kaydı kalıcı olarak silmek istediğinize emin misiniz?`);
+    
+    if (onay) {
+        try {
+            // 4. Tüm silme isteklerini aynı anda (paralel) gönder
+            const silmeIslemleri = idler.map(id => 
+                fetch(`/api/finans/borc-sil/${id}`, { method: 'DELETE' })
+            );
+
+            await Promise.all(silmeIslemleri);
+            
+            // 5. "Hepsini Seç" kutusunu temizle ve verileri yenile
+            const selectAllCb = document.getElementById('selectAll');
+            if (selectAllCb) selectAllCb.checked = false;
+
+            refreshData(); // Listeyi ve özet rakamları günceller
+            
+        } catch (error) {
+            console.error("Silme hatası:", error);
+            alert("Bazı kayıtlar silinirken bir hata oluştu.");
+        }
+    }
+}
+    const formatDate = (dateStr) => {
+        if (!dateStr) return "-";
+        const date = new Date(dateStr);
+        return isNaN(date) ? "-" : date.toLocaleDateString('tr-TR');
+    };
+
+    const formatDonem = (dateStr) => {
+        if (!dateStr) return "-";
+        const date = new Date(dateStr);
+        return isNaN(date) ? "-" : date.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    };
+
+    async function loadBorcListesi() {
+        try {
+            const res = await fetch('/api/finans/liste');
+            const list = await res.json();
+            const tbody = document.getElementById('borcTableBody');
+            
+            tbody.innerHTML = list.map(item => {
+                const isPaid = item.durum === 'Ödendi';
+                const kayitTarihi = item.olusturma_tarihi || item.created_at || item.tarih;
+                
+                return `
+                <tr class="hover:bg-slate-50 transition-colors group">
+                    <td class="px-6 py-4"><input type="checkbox" value="${item.id}" onchange="updateBulkButton()" class="row-checkbox rounded border-slate-300"></td>
+                    <td class="px-6 py-4 text-[11px] font-bold text-slate-600">${formatDate(kayitTarihi)}</td>
+                    <td class="px-6 py-4 text-[11px] font-bold text-indigo-600 uppercase italic">${formatDonem(item.vade_tarihi || kayitTarihi)}</td>
+                    <td class="px-6 py-4"><div class="text-xs font-black text-slate-800 uppercase italic">${item.blok_adi} - D:${item.daire_no}</div></td>
+                    <td class="px-6 py-4"><div class="text-[10px] text-slate-500 font-bold uppercase">${item.sakin_ad_soyad || 'BOŞ DAİRE'}</div></td>
+                    <td class="px-6 py-4"><span class="${getTurBadge(item.tur)} px-2.5 py-1 rounded-lg text-[9px] uppercase font-black italic">${item.tur}</span></td>
+                    <td class="px-6 py-4 text-[11px] text-slate-500 font-bold italic">${item.aciklama || '-'}</td>
+                    <td class="px-6 py-4"><span class="${isPaid ? 'text-slate-400' : 'text-rose-600'} font-black italic text-xs">₺${parseFloat(item.miktar).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</span></td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full ${isPaid ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}"></span>
+                            <span class="text-[10px] ${isPaid ? 'text-emerald-600' : 'text-rose-600'} uppercase font-black italic">${item.durum}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-3">
+                            ${!isPaid ? `<button onclick="odemeAlModalAc(${item.id}, ${item.miktar}, '${item.blok_adi} D:${item.daire_no}')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase italic shadow-md">ÖDEME GİR</button>` : `<button onclick="odemeIptalEt(${item.id})" class="text-slate-400 hover:text-amber-500" title="Geri Al"><i class="fas fa-undo-alt text-xs"></i></button>`}
+                            <button onclick="tekilSil(${item.id})" class="text-slate-300 hover:text-rose-500"><i class="fas fa-trash-alt text-xs"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            // --- HAFIZADAKİ AYARLARI GERİ YÜKLE ---
+            
+            // 1. Filtreleri ve Aramayı Geri Getir
+            const savedFilters = JSON.parse(localStorage.getItem('pia_filters'));
+            if (savedFilters) {
+                document.getElementById('searchInput').value = savedFilters.s || "";
+                document.getElementById('typeFilter').value = savedFilters.type || "";
+                document.getElementById('statusFilter').value = savedFilters.status || "";
+            }
+
+            // 2. Sıralamayı Geri Getir
+            const savedSort = JSON.parse(localStorage.getItem('pia_sort'));
+            if (savedSort) {
+                // sortTable fonksiyonunu çağırırken 'save' parametresini false yapıyoruz ki döngüye girmesin
+                sortTable(savedSort.col, savedSort.dir, false);
+            }
+
+            // 3. Tabloyu Görünür Kıl (Filtreleri uygula)
+            filterTable();
+
+        } catch(e) { console.error(e); }
+    }
+
+    async function loadStats() {
+        try {
+            const res = await fetch('/api/finans/ozet');
+            const data = await res.json();
+            const f = (v) => parseFloat(v || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2});
+            const kasa = (parseFloat(data.nakit_toplam || 0) + parseFloat(data.banka_toplam || 0));
+            document.getElementById('toplamKasa').innerText = `₺${f(kasa)}`;
+            document.getElementById('beklenenAlacak').innerText = `₺${f(data.toplam_alacak)}`;
+            document.getElementById('hedefKasa').innerText = `₺${f(kasa + parseFloat(data.toplam_alacak || 0))}`;
+            document.getElementById('bekleyenAidat').innerText = `A: ₺${f(data.bekleyen_aidat)}`;
+            document.getElementById('bekleyenDemirbas').innerText = `D: ₺${f(data.bekleyen_demirbas)}`;
+            document.getElementById('bekleyenYakit').innerText = `Y: ₺${f(data.bekleyen_yakit)}`;
+        } catch(e) {}
+    }
+// Arama işlemini geciktirmek için bir zamanlayıcı tanımlıyoruz
+let filterTimeout;
+
+function filterTable() {
+    clearTimeout(filterTimeout);
+
+    // 200ms gecikme ile ekranın donmasını engelliyoruz
+    filterTimeout = setTimeout(() => {
+        const s = document.getElementById('searchInput').value.toLocaleLowerCase('tr-TR').trim();
+        const type = document.getElementById('typeFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        // Hafızaya kaydet
+        localStorage.setItem('pia_filters', JSON.stringify({ s, type, status }));
+
+        const tbody = document.getElementById('borcTableBody');
+        const rows = tbody.rows;
+        let visibleCount = 0;
+
+        // Performans için döngüyü optimize ettik
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            
+            // Sadece aranan sütunların verisini çekiyoruz (Hız kazandırır)
+            const blokDaire = row.cells[3].textContent.toLocaleLowerCase('tr-TR');
+            const sakin = row.cells[4].textContent.toLocaleLowerCase('tr-TR');
+            const rType = row.cells[5].textContent.trim();
+            const rStatus = row.cells[8].textContent.trim();
+
+            const matchesSearch = s === "" || blokDaire.includes(s) || sakin.includes(s);
+            const matchesType = type === "" || rType === type;
+            const matchesStatus = status === "" || rStatus.includes(status);
+
+            if (matchesSearch && matchesType && matchesStatus) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        }
+        document.getElementById('rowCount').innerText = visibleCount;
+    }, 200);
+}
+
+    function showSortMenu(e, col) {
+        e.stopPropagation();
+        const m = document.getElementById('sortMenu');
+        m.innerHTML = `<div class="sort-menu-item" onclick="sortTable('${col}', 'asc', true)"><i class="fas fa-sort-amount-down"></i> A-Z</div><div class="sort-menu-item" onclick="sortTable('${col}', 'desc', true)"><i class="fas fa-sort-amount-up"></i> Z-A</div>`;
+        m.style.display = 'block'; 
+        m.style.left = e.pageX + 'px'; 
+        m.style.top = e.pageY + 'px';
+    }
+
+    function sortTable(col, dir, save = true) {
+        const tb = document.getElementById('borcTableBody');
+        const rows = Array.from(tb.querySelectorAll('tr'));
+        const map = { tarih: 1, donem: 2, blok: 3, sakin: 4, tur: 5, tutar: 7, durum: 8 };
+
+        rows.sort((a,b) => {
+            let A = a.cells[map[col]].innerText.trim();
+            let B = b.cells[map[col]].innerText.trim();
+            if(col === 'tutar') {
+                // Sayısal karşılaştırma (₺ ve nokta/virgül temizliği)
+                A = parseFloat(A.replace(/[₺.]/g, '').replace(',', '.'));
+                B = parseFloat(B.replace(/[₺.]/g, '').replace(',', '.'));
+                return dir === 'asc' ? A - B : B - A;
+            }
+            return dir === 'asc' ? A.localeCompare(B, 'tr') : B.localeCompare(A, 'tr');
+        });
+
+        rows.forEach(r => tb.appendChild(r));
+        
+        // Tercihi hafızaya kaydet (Sadece kullanıcı tıkladığında çalışır)
+        if(save) {
+            localStorage.setItem('pia_sort', JSON.stringify({ col, dir }));
+        }
+    }
+
+    // Diğer yardımcı fonksiyonlar (Modal, Silme, Ödeme vb. değişmedi)
+    async function customConfirm(msg) {
+        return new Promise(res => {
+            const m = document.getElementById('confirmModal');
+            document.getElementById('confirmMessage').innerText = msg;
+            m.classList.add('active');
+            document.getElementById('confirmApproveBtn').onclick = () => { m.classList.remove('active'); res(true); };
+            document.getElementById('confirmCancelBtn').onclick = () => { m.classList.remove('active'); res(false); };
+        });
+    }
+
+    async function tekilSil(id) { if(await customConfirm("Kaydı silmek istediğinize emin misiniz?")) { await fetch(`/api/finans/borc-sil/${id}`, {method:'DELETE'}); refreshData(); } }
+    async function odemeIptalEt(id) { if(await customConfirm("Ödemeyi geri almak istiyor musunuz?")) { await fetch(`/api/finans/odeme-iptal/${id}`, {method:'POST'}); refreshData(); } }
+    
+    function odemeAlModalAc(id, m, b) { aktifBorcId = id; aktifMiktar = m; document.getElementById('secilenBorcBilgi').innerText = b + " • ₺" + m.toLocaleString(); toggleModal('odemeSecimModal', true); }
+    async function tahsilatOnayla(y) { await fetch('/api/finans/tahsilat', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ borc_id:aktifBorcId, miktar:aktifMiktar, odeme_yontemi:y })}); toggleModal('odemeSecimModal', false); refreshData(); }
+
+    function toggleModal(id, s) { document.getElementById(id).classList.toggle('active', s); }
+    function getTurBadge(t) { const s = {'Aidat':'bg-blue-100 text-blue-600','Demirbaş':'bg-rose-100 text-rose-600','Yakıt':'bg-amber-100 text-amber-700'}; return s[t] || 'bg-slate-100 text-slate-600'; }
+    function refreshData() { loadStats(); loadBorcListesi(); updateBulkButton(); }
+    function toggleSelectAll(s) { document.querySelectorAll('.row-checkbox').forEach(c => c.checked = s.checked); updateBulkButton(); }
+    function updateBulkButton() {
+        const sel = document.querySelectorAll('.row-checkbox:checked');
+        const btn = document.getElementById('bulkDeleteBtn');
+        if(btn) {
+            btn.classList.toggle('hidden', sel.length === 0);
+            document.getElementById('selectedCount').innerText = sel.length;
+        }
+        document.querySelectorAll('.row-checkbox').forEach(c => c.closest('tr').classList.toggle('selected-row', c.checked));
+    }
+
+    async function openBorcModal() {
+        toggleModal('borcModal', true);
+        const res = await fetch('/api/admin/tum-daireler');
+        const d = await res.json();
+        document.getElementById('modalDaireSelect').innerHTML = `<option value="" disabled selected>Seçiniz...</option><option value="tum_daireler">--- TÜM DAİRELER ---</option>` + d.map(x => `<option value="${x.id}">${x.blok_adi} - ${x.daire_no} (${x.sakin_ad_soyad || 'BOŞ'})</option>`).join('');
+    }
+
+    document.getElementById('borcForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const did = document.getElementById('modalDaireSelect').value;
+        await fetch('/api/finans/borclandir', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                daire_id: did, is_bulk: did === "tum_daireler",
+                tur: document.getElementById('modalTur').value,
+                miktar: document.getElementById('modalMiktar').value,
+                aciklama: document.getElementById('modalAciklama').value,
+                vade_tarihi: new Date().toISOString().split('T')[0]
+            })
+        });
+        toggleModal('borcModal', false); refreshData();
+    };
+    function printTable() {
+    // Sadece o an ekranda görünür olan (filtreye takılmamış) satırları al
+    const rows = Array.from(document.querySelectorAll('#borcTableBody tr'))
+                      .filter(row => row.style.display !== 'none');
+
+    if (rows.length === 0) {
+        alert("Yazdırılacak veri bulunamadı!");
+        return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    const today = new Date().toLocaleDateString('tr-TR');
+
+    // Yazdırma tasarımı (CSS dahil)
+    let html = `
+    <html>
+    <head>
+        <title>Pia Finans - Borç Listesi</title>
+        <style>
+            body { font-family: 'Inter', sans-serif; padding: 20px; color: #333; }
+            h2 { text-align: center; text-transform: uppercase; font-size: 18px; margin-bottom: 5px; }
+            p.info { text-align: center; font-size: 12px; color: #666; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 11px; }
+            th { background-color: #f8fafc; font-weight: bold; text-transform: uppercase; }
+            .tutar { font-weight: bold; text-align: right; }
+            .durum { font-weight: bold; text-transform: uppercase; font-size: 9px; }
+            @media print {
+                .no-print { display: none; }
+                body { padding: 0; }
+            }
+        </style>
+    </head>
+    <body>
+        <h2>Finansal Hareket Raporu</h2>
+        <p class="info">Rapor Tarihi: ${today} | Toplam ${rows.length} Kayıt</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tarih</th>
+                    <th>Dönem</th>
+                    <th>Blok / Daire</th>
+                    <th>Sakin</th>
+                    <th>Tür</th>
+                    <th>Açıklama</th>
+                    <th>Tutar</th>
+                    <th>Durum</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    rows.forEach(row => {
+        // Tablo hücrelerinden verileri çek (Checkbox ve Aksiyon sütunlarını atla)
+        html += `
+            <tr>
+                <td>${row.cells[1].innerText}</td>
+                <td>${row.cells[2].innerText}</td>
+                <td>${row.cells[3].innerText}</td>
+                <td>${row.cells[4].innerText}</td>
+                <td>${row.cells[5].innerText}</td>
+                <td>${row.cells[6].innerText}</td>
+                <td class="tutar">${row.cells[7].innerText}</td>
+                <td class="durum">${row.cells[8].innerText}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+        <div style="margin-top: 30px; text-align: right; font-size: 10px; color: #999;">
+            Pia Finans & Muhasebe Sistemi tarafından oluşturulmuştur.
+        </div>
+        <script>window.print(); setTimeout(() => window.close(), 500);<\/script>
+
+            
+    </body>
+    </html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+}
+</script>
+</body>
+</html>

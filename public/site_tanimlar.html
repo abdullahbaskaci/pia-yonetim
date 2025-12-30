@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const userRole = localStorage.getItem('userRole');
+        if (!userRole || userRole.toLowerCase() !== 'admin') {
+            Swal.fire('Yetkisiz Erişim', 'Bu sayfaya erişim yetkiniz yok. Lütfen giriş yapın.', 'error').then(() => {
+                window.location.href = 'login.html';
+            });
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pia | Site Yönetimi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/imask"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); align-items: center; justify-content: center; z-index: 1000; }
+        .modal.active { display: flex; }
+        .form-card { background: #ffffff; border-radius: 24px; width: 550px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow: hidden; }
+        .blok-chip { transition: all 0.2s; cursor: pointer; border: 1px solid #e2e8f0; }
+        .blok-active { background-color: #1e3a8a !important; color: #ffffff !important; border-color: #1e3a8a !important; }
+        .input-box, .select-box { background-color: #f8fafc; border: 1px solid #e2e8f0; transition: all 0.2s ease; }
+        .input-box:focus { border-color: #3b82f6; background-color: #fff; outline: none; }
+        ::-webkit-scrollbar { height: 6px; width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        
+
+        @media print {
+    /* Sayfadaki butonları, header'ı ve yan menüyü gizle */
+    header, #blokBar, .space-x-2, button, .z-20 { display: none !important; }
+    
+    /* İçeriği tam sayfa yap */
+    body { background: white !important; overflow: visible !important; height: auto !important; }
+    main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
+    .overflow-y-auto { overflow: visible !important; }
+    
+    /* Tabloyu kağıda sığdır */
+    .bg-white { border: none !important; box-shadow: none !important; }
+    table { width: 100% !important; border-collapse: collapse !important; font-size: 12px !important; }
+    th, td { border: 1px solid #e2e8f0 !important; padding: 10px !important; }
+    
+    /* Şifre sütununu gizlemek isterseniz (Güvenlik için önerilir) */
+    th:nth-child(4), td:nth-child(4) { display: none !important; }
+
+    /* Sayfa başlığı ekle */
+    #baslik { text-align: center; margin-bottom: 20px; color: black !important; }
+}
+    </style>
+</head>
+<body class="bg-slate-50 h-screen flex flex-col overflow-hidden">
+
+    <header class="h-20 bg-white border-b px-8 flex justify-between items-center shrink-0 z-20">
+        <div class="flex items-center">
+            <div class="flex items-center gap-2 border-l pl-6 ml-2">
+                <select id="siteSelect" onchange="bloklariYukle()" class="bg-slate-50 border border-slate-200 font-bold rounded-xl px-4 py-2 outline-none focus:border-blue-500 text-sm cursor-pointer min-w-[200px]">
+                    <option value="">Site Seçiniz</option>
+                </select>
+                <button onclick="siteDuzenleFormAc()" id="btnSiteAyarlar" style="display:none;" class="text-slate-500 hover:bg-slate-100 w-9 h-9 rounded-lg flex items-center justify-center transition-all" title="Site Ayarları">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+<div class="flex items-center gap-3">
+    <button onclick="raporYazdir()" id="btnYazdir" style="display:none;" class="bg-slate-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 hover:bg-slate-600 transition-all">
+        <i class="fas fa-print"></i> Listeyi Yazdır
+    </button>
+    <button onclick="finansAyarlariAc()" ...>...</button>
+    </div>
+        <div class="flex items-center gap-3">
+            <button onclick="finansAyarlariAc()" class="bg-amber-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 hover:bg-amber-600 transition-all">
+                <i class="fas fa-calculator"></i> Finansal Ayarlar
+            </button>
+            <button onclick="modalAc('modalYeniSite')" class="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-all">
+                <i class="fas fa-plus-circle"></i> Yeni Site
+            </button>
+            <button onclick="modalAc('modalYeniBlok')" id="btnYeniBlok" style="display:none;" class="bg-slate-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 hover:bg-slate-800 transition-all">
+                <i class="fas fa-plus"></i> Yeni Blok
+            </button>
+            <button onclick="modalAc('modalTopluDaire')" id="btnToplu" style="display:none;" class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 hover:bg-emerald-700 transition-all">
+                <i class="fas fa-layer-group"></i> Toplu Daire
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <div id="blokBar" class="bg-white border-b px-8 py-3 flex items-center gap-3 overflow-x-auto shrink-0" style="display:none;">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2">Bloklar:</span>
+            <div id="blokListesi" class="flex items-center gap-2"></div>
+        </div>
+
+        <div class="flex-1 p-8 overflow-y-auto">
+            <div class="mb-6 flex justify-between items-end">
+                <div>
+                    <h1 id="baslik" class="text-2xl font-black text-slate-800 uppercase italic">Lütfen Site Seçin</h1>
+                    <div id="sorumlu_kapsayici" class="hidden items-center gap-2 mt-2">
+                        <span class="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-bold border border-blue-100 uppercase flex items-center">
+                            <i class="fas fa-user-shield mr-2"></i> Bina Sorumlusu: <span id="blok_sorumlu_adi" class="ml-1 text-blue-800 italic font-black"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b">
+                        <tr class="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                            <th class="px-6 py-4">Daire / Kat</th>
+                            <th class="px-6 py-4">Durum / Tür</th>
+                            <th class="px-6 py-4">Sakin & İletişim</th>
+                            <th class="px-6 py-4">Şifre</th>
+                            <th class="px-6 py-4 text-right">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="daireTable" class="divide-y divide-slate-100 text-slate-700">
+                        <tr><td colspan="5" class="p-24 text-center text-slate-300 font-black italic uppercase">Üst menüden seçim yapın.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="modalYeniSite" class="modal">
+        <div class="form-card">
+            <div class="bg-blue-600 p-6 flex justify-between items-center text-white">
+                <div><h3 class="font-bold uppercase italic">Yeni Site Ekle</h3></div>
+                <button onclick="modalKapat('modalYeniSite')" class="w-8 h-8 rounded-full hover:bg-blue-500"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-8 space-y-4">
+                <input type="text" id="yeni_site_adi" placeholder="Site Adı" class="w-full p-3.5 rounded-xl input-box font-bold">
+                <button onclick="siteKaydet()" class="w-full bg-blue-600 text-white rounded-2xl font-bold py-4">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalSiteDuzenle" class="modal">
+        <div class="form-card">
+            <div class="bg-slate-800 p-6 flex justify-between items-center text-white">
+                <div><h3 class="font-bold uppercase italic">Site Ayarları</h3></div>
+                <button onclick="modalKapat('modalSiteDuzenle')" class="w-8 h-8 rounded-full hover:bg-slate-700"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-8 space-y-4">
+                <input type="hidden" id="edit_site_id">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Site Adı</label>
+                    <input type="text" id="edit_site_adi" class="w-full p-3.5 rounded-xl input-box font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Yönetici Ad Soyad</label>
+                    <input type="text" id="edit_site_yonetici_ad_soyad" class="w-full p-3.5 rounded-xl input-box font-bold" placeholder="Ad Soyad">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Yönetici GSM</label>
+                    <input type="text" id="edit_site_gsm" class="w-full p-3.5 rounded-xl input-box font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Adres</label>
+                    <input type="text" id="edit_site_adres" class="w-full p-3.5 rounded-xl input-box font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase">IBAN</label>
+                    <input type="text" id="edit_site_iban" class="w-full p-3.5 rounded-xl input-box font-bold">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button onclick="siteSil()" class="bg-rose-50 text-rose-600 px-6 rounded-xl font-bold hover:bg-rose-100 transition-all">SİTEYİ SİL</button>
+                    <button onclick="siteGuncelle()" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold">GÜNCELLE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalFinansAyarları" class="modal">
+        <div class="form-card">
+            <div class="bg-amber-500 p-6 flex justify-between items-center text-white">
+                <div><h3 class="font-bold uppercase italic">Finansal Ayarlar</h3></div>
+                <button onclick="modalKapat('modalFinansAyarları')" class="w-8 h-8 rounded-full hover:bg-amber-400"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-8 space-y-5">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Aidat Günü</label>
+                        <input type="number" id="f_aidat_gunu" min="1" max="28" class="w-full p-3.5 rounded-xl input-box font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Gecikme Günü</label>
+                        <input type="number" id="f_gecikme_gunu" min="1" max="28" class="w-full p-3.5 rounded-xl input-box font-bold">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Gecikme Oranı (%)</label>
+                    <input type="number" id="f_gecikme_orani" step="0.1" class="w-full p-3.5 rounded-xl input-box font-bold">
+                </div>
+                <button onclick="testBorclandir()" class="w-full bg-blue-50 text-blue-600 font-bold py-3 rounded-xl border border-blue-100 uppercase text-xs italic">
+                    <i class="fas fa-bolt mr-2"></i> Manuel Borçlandırma Testi
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="modalKapat('modalFinansAyarları')" class="flex-1 p-4 font-bold text-slate-400">İptal</button>
+                    <button onclick="finansAyarlariKaydet()" class="flex-1 bg-amber-500 text-white font-bold rounded-xl">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalYeniBlok" class="modal">
+        <div class="form-card">
+            <div class="bg-slate-800 p-6 flex justify-between items-center text-white">
+                <div><h3 class="font-bold uppercase italic">Yeni Blok Ekle</h3></div>
+                <button onclick="modalKapat('modalYeniBlok')" class="w-8 h-8 rounded-full"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-8 space-y-4">
+                <input type="text" id="yeni_blok_adi" placeholder="Blok Adı" class="w-full p-3.5 rounded-xl input-box font-bold">
+                <input type="text" id="yeni_bina_sorumlusu" placeholder="Bina Sorumlusu" class="w-full p-3.5 rounded-xl input-box font-bold">
+                <button onclick="blokKaydet()" class="w-full bg-slate-800 text-white rounded-2xl font-bold py-4">Blok Ekle</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalBlokDuzenle" class="modal">
+        <div class="form-card">
+            <div class="bg-slate-800 p-6 flex justify-between items-center text-white">
+                <div><h3 class="font-bold uppercase italic">Blok Bilgileri</h3></div>
+                <button onclick="modalKapat('modalBlokDuzenle')" class="w-8 h-8 rounded-full"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-8 space-y-4">
+                <input type="hidden" id="edit_blok_id">
+                <input type="text" id="edit_blok_adi" class="w-full p-3.5 rounded-xl input-box font-bold">
+                <input type="text" id="edit_bina_sorumlusu" class="w-full p-3.5 rounded-xl input-box font-bold">
+                <div class="flex gap-2">
+                    <button onclick="blokSil()" class="bg-rose-50 text-rose-600 px-4 rounded-xl font-bold">SİL</button>
+                    <button onclick="blokGuncelle()" class="flex-1 bg-blue-700 text-white py-4 rounded-xl font-bold">Güncelle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalDuzenle" class="modal">
+        <div class="form-card">
+            <div class="bg-blue-600 p-6 flex justify-between items-center text-white">
+                <div><h3 class="font-bold uppercase italic">Daire Düzenle</h3></div>
+                <button onclick="modalKapat('modalDuzenle')" class="w-8 h-8 rounded-full hover:bg-blue-500"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-8 space-y-4">
+                <input type="hidden" id="edit_id">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">Daire No</label>
+                        <input type="text" id="edit_no" placeholder="Daire No" class="w-full p-3.5 rounded-xl input-box font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">Kat</label>
+                        <input type="text" id="edit_kat" placeholder="Kat" class="w-full p-3.5 rounded-xl input-box font-bold">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">Ad Soyad</label>
+                    <input type="text" id="edit_ad_soyad" placeholder="Ad Soyad" class="w-full p-3.5 rounded-xl input-box font-bold">
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">Telefon Numarası (GSM)</label>
+                    <input type="text" id="edit_gsm" placeholder="0 (5xx) xxx xx xx" class="w-full p-3.5 rounded-xl input-box font-bold">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">Sakin Türü</label>
+                        <select id="edit_turu" class="w-full p-3.5 rounded-xl select-box font-bold">
+                            <option value="Mülk Sahibi">Mülk Sahibi</option>
+                            <option value="Kiracı">Kiracı</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Görevli">Görevli</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">Durum</label>
+                        <select id="edit_durum" class="w-full p-3.5 rounded-xl select-box font-bold">
+                            <option value="1">Aktif</option>
+                            <option value="0">Pasif</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">Sistem Giriş Adı</label>
+                    <input type="text" id="edit_giris" placeholder="Giriş Adı" class="w-full p-3.5 rounded-xl input-box font-bold">
+                </div>
+
+               <div>
+    <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">Şifre</label>
+    <input type="password" id="edit_sifre" placeholder="********" class="w-full p-3.5 rounded-xl input-box font-bold">
+</div>
+
+                <button onclick="daireGuncelle()" class="w-full bg-blue-600 text-white rounded-2xl font-bold py-4 shadow-lg hover:bg-blue-700 transition-all active:scale-[0.98]">
+                    Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalTopluDaire" class="modal">
+        <div class="bg-white p-8 rounded-3xl w-80 shadow-2xl">
+            <h3 class="font-black mb-6 uppercase text-center italic">Toplu Daire Ekle</h3>
+            <div class="space-y-4">
+                <input type="number" id="startNo" placeholder="Başlangıç No" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none">
+                <input type="number" id="count" placeholder="Adet" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none">
+                <button onclick="topluDaireKaydet()" class="w-full bg-emerald-600 text-white rounded-xl font-bold py-3">Ekle</button>
+                <button onclick="modalKapat('modalTopluDaire')" class="w-full text-slate-400 font-bold">İptal</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // daireleriYukle fonksiyonu içinde buton görünürlüğünü açın
+async function daireleriYukle(id, ad, el) {
+    // ... mevcut kodlar ...
+    document.getElementById('btnYazdir').style.display = 'inline-flex'; // Yazdır butonunu göster
+    // ... mevcut kodlar ...
+}
+
+// Yazdırma fonksiyonu
+function raporYazdir() {
+    // Mevcut site ve blok bilgisini başlığa ekle
+    const siteSelect = document.getElementById('siteSelect');
+    const siteAdi = siteSelect.options[siteSelect.selectedIndex].text;
+    const blokAdi = selBlokAdi;
+    
+    // Geçici başlık oluştur
+    const baslikElement = document.getElementById('baslik');
+    const eskiBaslik = baslikElement.innerText;
+    baslikElement.innerText = `${siteAdi} - ${blokAdi} DAİRE LİSTESİ`;
+
+    window.print();
+
+    // Yazdırdıktan sonra başlığı eski haline döndür
+    baslikElement.innerText = eskiBaslik;
+}
+        let selSiteId = null, selBlokId = null, selBlokAdi = "", gsmMask, siteGsmMask;
+
+        window.onload = () => {
+            siteleriYukle();
+            gsmMask = IMask(document.getElementById('edit_gsm'), { mask: '0 (500) 000 00 00' });
+            siteGsmMask = IMask(document.getElementById('edit_site_gsm'), { mask: '0 (500) 000 00 00' });
+            IMask(document.getElementById('edit_site_iban'), {
+                mask: 'TR00 0000 0000 0000 0000 0000 00',
+                definitions: { '0': /[0-9]/ },
+                lazy: false
+            });
+        };
+
+        function modalAc(id) { document.getElementById(id).classList.add('active'); }
+        function modalKapat(id) { document.getElementById(id).classList.remove('active'); }
+
+        async function siteleriYukle() {
+            try {
+                const res = await fetch('/api/siteler');
+                const siteler = await res.json();
+                const select = document.getElementById('siteSelect');
+                select.innerHTML = '<option value="">Site Seçiniz</option>';
+                siteler.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id; opt.textContent = s.site_adi;
+                    select.appendChild(opt);
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        async function siteKaydet() {
+            const ad = document.getElementById('yeni_site_adi').value;
+            if(!ad) return;
+            const res = await fetch('/api/siteler', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ site_adi: ad })
+            });
+            if(res.ok) { modalKapat('modalYeniSite'); siteleriYukle(); }
+        }
+
+        async function siteDuzenleFormAc() {
+            const id = document.getElementById('siteSelect').value;
+            if (!id) return;
+            try {
+                const res = await fetch(`/api/siteler/${id}`);
+                const s = await res.json();
+                document.getElementById('edit_site_id').value = s.id;
+                document.getElementById('edit_site_adi').value = s.site_adi || "";
+                document.getElementById('edit_site_yonetici_ad_soyad').value = s.yonetici_ad_soyad || "";
+                siteGsmMask.value = s.yonetici_gsm || "";
+                document.getElementById('edit_site_adres').value = s.adres || "";
+                document.getElementById('edit_site_iban').value = s.iban || "";
+                modalAc('modalSiteDuzenle');
+            } catch (err) { Swal.fire('Hata', 'Bilgiler yüklenemedi.', 'error'); }
+        }
+
+        async function siteGuncelle() {
+            const id = document.getElementById('edit_site_id').value;
+            const payload = {
+                site_adi: document.getElementById('edit_site_adi').value,
+                yonetici_ad_soyad: document.getElementById('edit_site_yonetici_ad_soyad').value,
+                yonetici_gsm: siteGsmMask.value,
+                adres: document.getElementById('edit_site_adres').value,
+                iban: document.getElementById('edit_site_iban').value
+            };
+            const res = await fetch(`/api/siteler/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                Swal.fire({ icon: 'success', title: 'Güncellendi', timer: 1500, showConfirmButton: false });
+                modalKapat('modalSiteDuzenle');
+                siteleriYukle();
+            }
+        }
+
+        async function siteSil() {
+            const id = document.getElementById('edit_site_id').value;
+            if (!id) return;
+
+            const result = await Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu site ve bağlı TÜM veriler (blok, daire) KALICI OLARAK silinecektir!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#f1f5f9',
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç',
+                customClass: { confirmButton: 'rounded-xl px-6 py-3 font-bold', cancelButton: 'rounded-xl px-6 py-3 font-bold text-slate-500' }
+            });
+
+            if (result.isConfirmed) {
+                const res = await fetch(`/api/siteler/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    Swal.fire('Silindi!', 'Site başarıyla kaldırıldı.', 'success').then(() => location.reload());
+                }
+            }
+        }
+
+        async function bloklariYukle() {
+            selSiteId = document.getElementById('siteSelect').value;
+            const btnSiteAyarlar = document.getElementById('btnSiteAyarlar');
+            const btnYeniBlok = document.getElementById('btnYeniBlok');
+            const blokBar = document.getElementById('blokBar');
+            const blokListesi = document.getElementById('blokListesi');
+            
+            if(!selSiteId) { 
+                btnSiteAyarlar.style.display = 'none';
+                btnYeniBlok.style.display = 'none';
+                blokBar.style.display = 'none';
+                return;
+            }
+            
+            btnSiteAyarlar.style.display = 'inline-flex';
+            btnYeniBlok.style.display = 'inline-flex';
+            blokBar.style.display = 'flex';
+
+            const res = await fetch(`/api/bloklar/${selSiteId}`);
+            const bloklar = await res.json();
+            blokListesi.innerHTML = '';
+            bloklar.forEach(b => {
+                const div = document.createElement('div');
+                div.className = `blok-chip px-4 py-2 rounded-xl font-bold text-xs bg-slate-50 flex items-center gap-2 hover:bg-slate-100 transition`;
+                div.id = `chip-${b.id}`;
+                div.innerHTML = `
+                    <span onclick="daireleriYukle(${b.id}, '${b.blok_adi}', this.parentElement)">${b.blok_adi}</span>
+                    <button onclick="blokDuzenleFormAc(${b.id}, '${b.blok_adi}', '${b.bina_sorumlusu || ''}')" class="ml-1 opacity-40 hover:opacity-100">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                `;
+                blokListesi.appendChild(div);
+            });
+        }
+
+        async function blokKaydet() {
+            const ad = document.getElementById('yeni_blok_adi').value;
+            const sorumlu = document.getElementById('yeni_bina_sorumlusu').value;
+            if(!ad) return;
+            const res = await fetch('/api/bloklar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ site_id: selSiteId, blok_adi: ad, bina_sorumlusu: sorumlu })
+            });
+            if(res.ok) { modalKapat('modalYeniBlok'); bloklariYukle(); }
+        }
+
+        async function blokGuncelle() {
+            const id = document.getElementById('edit_blok_id').value;
+            const ad = document.getElementById('edit_blok_adi').value;
+            const sorumlu = document.getElementById('edit_bina_sorumlusu').value;
+            const res = await fetch(`/api/bloklar/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ blok_adi: ad, bina_sorumlusu: sorumlu })
+            });
+            if(res.ok) { modalKapat('modalBlokDuzenle'); bloklariYukle(); }
+        }
+
+        async function blokSil() {
+            const id = document.getElementById('edit_blok_id').value;
+            const result = await Swal.fire({
+                title: 'Blok Silinsin mi?',
+                text: "Blok ve bağlı tüm daireler silinecektir!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sil',
+                cancelButtonText: 'Vazgeç'
+            });
+            if (result.isConfirmed) {
+                const res = await fetch(`/api/bloklar/${id}`, { method: 'DELETE' });
+                if(res.ok) { modalKapat('modalBlokDuzenle'); bloklariYukle(); Swal.fire('Silindi', '', 'success'); }
+            }
+        }
+
+        function blokDuzenleFormAc(id, ad, sorumlu) {
+            document.getElementById('edit_blok_id').value = id;
+            document.getElementById('edit_blok_adi').value = ad;
+            document.getElementById('edit_bina_sorumlusu').value = sorumlu;
+            modalAc('modalBlokDuzenle');
+        }
+
+        async function daireleriYukle(id, ad, el) {
+            selBlokId = id; selBlokAdi = ad;
+            document.querySelectorAll('.blok-chip').forEach(i => i.classList.remove('blok-active'));
+            if(el) el.classList.add('blok-active');
+            document.getElementById('btnToplu').style.display = 'inline-flex';
+
+            const res = await fetch(`/api/daireler/${id}`);
+            const data = await res.json();
+            
+            if (data.length > 0) {
+                const info = data[0];
+                document.getElementById('baslik').innerText = info.blok_adi + " YÖNETİMİ";
+                if (info.bina_sorumlusu) {
+                    document.getElementById('blok_sorumlu_adi').innerText = info.bina_sorumlusu;
+                    document.getElementById('sorumlu_kapsayici').classList.replace('hidden', 'flex');
+                } else {
+                    document.getElementById('sorumlu_kapsayici').classList.replace('flex', 'hidden');
+                }
+            } else {
+                document.getElementById('baslik').innerText = ad;
+                document.getElementById('sorumlu_kapsayici').classList.replace('flex', 'hidden');
+            }
+            
+            const tbody = document.getElementById('daireTable');
+            tbody.innerHTML = data.map(d => `
+                <tr class="hover:bg-slate-50 border-b">
+                    <td class="px-6 py-5 font-black">No ${d.daire_no} <br><span class="text-[10px] text-slate-400 uppercase">${d.kat}. KAT</span></td>
+                    <td class="px-6 py-5">
+                        <span class="px-2 py-1 rounded text-[10px] font-black ${d.durum == 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${d.durum == 1 ? 'AKTİF' : 'PASİF'}</span>
+                        <div class="text-[10px] font-bold text-slate-400 mt-1">${d.turu || 'Mülk Sahibi'}</div>
+                    </td>
+                    <td class="px-6 py-5 font-bold text-slate-700">${d.sakin_ad_soyad || '-'}<div class="text-xs text-blue-500">${d.gsm || ''}</div></td>
+                   <td class="px-6 py-5 text-xs font-mono text-slate-400">
+    ${d.sifre ? '••••••••' : '-'}
+</td>
+                    <td class="px-6 py-5 text-right space-x-2">
+                        <button onclick='duzenleFormAc(${JSON.stringify(d)})' class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-black uppercase">Düzenle</button>
+                        <button onclick="daireSil(${d.id})" class="bg-rose-50 text-rose-600 px-3 py-1.5 rounded-lg text-xs font-black uppercase">Sil</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="p-10 text-center text-slate-400 italic">Daire Bulunamadı</td></tr>';
+        }
+
+        function duzenleFormAc(d) {
+            document.getElementById('edit_id').value = d.id;
+            document.getElementById('edit_no').value = d.daire_no;
+            document.getElementById('edit_kat').value = d.kat;
+            document.getElementById('edit_ad_soyad').value = d.sakin_ad_soyad || "";
+            gsmMask.value = d.gsm || "";
+            document.getElementById('edit_giris').value = d.giris_adi || "";
+            document.getElementById('edit_sifre').value = d.sifre || "";
+            document.getElementById('edit_turu').value = d.turu || "Mülk Sahibi";
+            document.getElementById('edit_durum').value = d.durum;
+            modalAc('modalDuzenle');
+        }
+
+        async function daireGuncelle() {
+    const id = document.getElementById('edit_id').value;
+    const rawPassword = document.getElementById('edit_sifre').value;
+    
+    // Şifre alanı boş değilse MD5'e çevir, boşsa mevcut şifreyi bozmamak için gönderme veya olduğu gibi bırak
+    let finalPassword = rawPassword;
+    if (rawPassword && rawPassword.length > 0 && !rawPassword.includes('*')) {
+        finalPassword = CryptoJS.MD5(rawPassword).toString();
+    }
+
+    const payload = {
+        daire_no: document.getElementById('edit_no').value,
+        kat: document.getElementById('edit_kat').value,
+        sakin_ad_soyad: document.getElementById('edit_ad_soyad').value,
+        gsm: gsmMask.value,
+        giris_adi: document.getElementById('edit_giris').value,
+        sifre: finalPassword, // Veritabanına gidecek olan MD5'li şifre
+        turu: document.getElementById('edit_turu').value,
+        durum: document.getElementById('edit_durum').value
+    };
+
+    try {
+        const res = await fetch(`/api/daireler/${id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        if(res.ok) { 
+            Swal.fire({ icon: 'success', title: 'Güncellendi', timer: 1000, showConfirmButton: false });
+            modalKapat('modalDuzenle'); 
+            daireleriYukle(selBlokId, selBlokAdi); 
+        } else {
+            Swal.fire('Hata', 'Güncelleme yapılamadı', 'error');
+        }
+    } catch (error) {
+        console.error('Güncelleme hatası:', error);
+    }
+}
+
+        async function daireSil(id) {
+            const result = await Swal.fire({
+                title: 'Silinsin mi?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç'
+            });
+            if (result.isConfirmed) {
+                const res = await fetch(`/api/daireler/${id}`, { method: 'DELETE' });
+                if(res.ok) { daireleriYukle(selBlokId, selBlokAdi); Swal.fire('Silindi', '', 'success'); }
+            }
+        }
+
+        async function topluDaireKaydet() {
+            const start = document.getElementById('startNo').value;
+            const count = document.getElementById('count').value;
+            const res = await fetch('/api/daireler/toplu', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ blok_id: selBlokId, baslangic_no: start, adet: count })
+            });
+            if(res.ok) { modalKapat('modalTopluDaire'); daireleriYukle(selBlokId, selBlokAdi); }
+        }
+
+        async function finansAyarlariAc() {
+            try {
+                const res = await fetch('/api/finans-ayarlari');
+                const data = await res.json();
+                if (data) {
+                    document.getElementById('f_aidat_gunu').value = data.aidat_gunu;
+                    document.getElementById('f_gecikme_gunu').value = data.gecikme_gunu;
+                    document.getElementById('f_gecikme_orani').value = data.gecikme_orani;
+                }
+                modalAc('modalFinansAyarları');
+            } catch (err) { Swal.fire('Hata', 'Ayarlar alınamadı.', 'error'); }
+        }
+
+        async function finansAyarlariKaydet() {
+            const payload = {
+                aidat_gunu: document.getElementById('f_aidat_gunu').value,
+                gecikme_gunu: document.getElementById('f_gecikme_gunu').value,
+                gecikme_orani: document.getElementById('f_gecikme_orani').value
+            };
+            const res = await fetch('/api/finans-ayarlari', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) { Swal.fire('Başarılı', 'Ayarlar güncellendi.', 'success'); modalKapat('modalFinansAyarları'); }
+        }
+
+        async function testBorclandir() {
+            const result = await Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Tüm aktif dairelere aidat tahakkuk ettirilecek!",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Evet, Borçlandır',
+                cancelButtonText: 'İptal'
+            });
+            if (result.isConfirmed) {
+                const res = await fetch('/api/test/borclandir', { method: 'POST' });
+                const data = await res.json();
+                Swal.fire('Tamamlandı', `${data.eklenen} daire borçlandırıldı.`, 'success');
+            }
+        }
+    </script>
+</body>
+</html>

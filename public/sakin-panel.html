@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <script>
+        // Oturum ve Rol Kontrolü
+        const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('userId');
+        if (!userId) { window.location.href = 'login.html'; }
+        if (userRole === 'admin') { window.location.href = 'Anasayfa.html'; }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pia Site Yönetim | Sakin Paneli</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #fdfdfd; color: #1e293b; }
+        
+        /* Arka Plan Dekorasyonu */
+        .bg-blob { position: absolute; width: 500px; height: 500px; border-radius: 50%; filter: blur(80px); z-index: -1; opacity: 0.12; pointer-events: none; }
+        .blob-1 { background: #6366f1; top: -100px; left: -100px; }
+        .blob-2 { background: #f59e0b; bottom: -100px; right: -100px; }
+
+        /* Cam Efekti ve Sidebar */
+        .glass-sidebar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .sidebar-link { transition: all 0.3s ease; border-radius: 16px; color: #64748b; font-weight: 600; }
+        .sidebar-link:hover { background: rgba(241, 245, 249, 0.8); color: #4f46e5; transform: scale(1.02); }
+        .active-link { background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%) !important; color: white !important; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3); }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02), 0 8px 10px -6px rgba(0, 0, 0, 0.02); border: 1px solid rgba(241, 245, 249, 0.8); }
+
+        @keyframes pulse-gold {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+        .new-badge-pulse { animation: pulse-gold 2s infinite; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; font-size: 8px; font-weight: 900; padding: 2px 8px; border-radius: 99px; text-transform: uppercase; }
+        .new-item-border { border: 1.5px solid #f59e0b !important; background-color: #fffbeb !important; }
+
+        #sidebar-overlay { display: none; }
+        #sidebar-overlay.active { display: block; }
+    </style>
+</head>
+<body class="flex min-h-screen relative overflow-x-hidden">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 md:hidden"></div>
+
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 glass-sidebar border-r border-slate-100 flex flex-col shrink-0 p-6 z-40 transition-transform -translate-x-full md:relative md:translate-x-0">
+        <div class="flex items-center gap-3 mb-10 px-2">
+            <div class="w-12 h-12 flex items-center justify-center overflow-hidden">
+                <img src="pialogo.png" alt="Logo" class="w-full h-full object-contain">
+            </div>
+            <div class="flex flex-col">
+                <h1 class="text-lg font-extrabold tracking-tight text-slate-800 uppercase">PIA <span class="text-indigo-600">YAZILIM</span></h1>
+                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Sakin Paneli</p>
+            </div>
+        </div>
+        
+        <nav class="flex-grow space-y-6">
+            <a href="#" class="sidebar-link active-link flex items-center gap-3 py-3.5 px-5 text-sm"><i class="fas fa-th-large w-5"></i> Panelim</a>
+
+            <div class="space-y-3">
+                <p class="px-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Hızlı İşlemler</p>
+                <div class="space-y-2">
+                    <button onclick="talepModalAc('Arıza Bildirimi')" class="w-full sidebar-link flex items-center gap-3 py-3 px-5 text-xs font-bold group text-left">
+                        <i class="fas fa-wrench w-5 text-indigo-500 group-hover:rotate-12 transition-transform"></i> Arıza Bildir
+                    </button>
+                    <button onclick="talepModalAc('Temizlik Talebi')" class="w-full sidebar-link flex items-center gap-3 py-3 px-5 text-xs font-bold group text-left">
+                        <i class="fas fa-broom w-5 text-indigo-400 group-hover:rotate-12 transition-transform"></i> Temizlik İste
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="mt-auto pt-6">
+            <button onclick="logout()" class="w-full py-3.5 bg-red-50 text-red-500 rounded-2xl text-xs font-bold hover:bg-red-500 hover:text-white transition-all uppercase">
+                <i class="fas fa-power-off mr-2"></i> Çıkış Yap
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
+        <header class="h-20 bg-white/70 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-4 md:px-8 shrink-0">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><i class="fas fa-bars text-xl"></i></button>
+                <div class="min-w-0">
+                    <h2 class="text-sm md:text-base font-bold text-slate-800 truncate">Hoş Geldiniz, <span id="displayUserName" class="text-indigo-600 font-extrabold">...</span></h2>
+                    <p id="displayUserInfo" class="text-[10px] md:text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">Yükleniyor...</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 md:gap-6">
+                <div class="text-right hidden sm:block">
+                    <p class="text-[10px] font-black text-slate-400 uppercase">GÜNCEL BORÇ</p>
+                    <h3 id="toplamBorcHeader" class="text-lg font-black text-red-500">₺0,00</h3>
+                </div>
+                <button onclick="odemeModaliAc()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 md:px-6 py-2.5 rounded-xl text-[10px] md:text-xs font-bold shadow-lg shadow-indigo-200 transition-all flex items-center gap-2">
+                    <i class="fas fa-credit-card"></i> <span class="hidden xs:inline">BORÇ ÖDE</span><span class="xs:hidden">ÖDE</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="p-4 md:p-8 overflow-y-auto space-y-6 custom-scrollbar">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+                <div class="bg-white/80 backdrop-blur-sm p-4 rounded-2xl card-shadow">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">AİDAT</p>
+                    <h3 id="borcAidat" class="text-sm md:text-base font-black text-slate-800">₺0,00</h3>
+                </div>
+                <div class="bg-white/80 backdrop-blur-sm p-4 rounded-2xl card-shadow">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">DEMİRBAŞ</p>
+                    <h3 id="borcDemirbas" class="text-sm md:text-base font-black text-slate-800">₺0,00</h3>
+                </div>
+                <div class="bg-white/80 backdrop-blur-sm p-4 rounded-2xl card-shadow">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">YAKIT</p>
+                    <h3 id="borcYakit" class="text-sm md:text-base font-black text-slate-800">₺0,00</h3>
+                </div>
+                <div class="bg-emerald-500 p-4 rounded-2xl shadow-lg shadow-emerald-200 text-white">
+                    <p class="text-[9px] font-bold opacity-80 uppercase mb-1">ÖDENEN</p>
+                    <h3 id="toplamOdeme" class="text-sm md:text-base font-black">₺0,00</h3>
+                </div>
+                <div class="bg-indigo-600 p-4 rounded-2xl shadow-lg shadow-indigo-200 text-white">
+                    <p class="text-[9px] font-bold opacity-80 uppercase mb-1">NET BORÇ</p>
+                    <h3 id="borcToplam" class="text-sm md:text-base font-black">₺0,00</h3>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                <div class="bg-white/80 backdrop-blur-sm p-4 rounded-2xl card-shadow flex items-center gap-3">
+                    <div class="w-8 h-8 md:w-10 md:h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-sm md:text-lg"><i class="fas fa-door-open"></i></div>
+                    <div class="min-w-0"><p class="text-[9px] font-bold text-slate-400 uppercase">Daire</p><h3 id="statDaire" class="text-sm md:text-base font-black text-slate-800 truncate">...</h3></div>
+                </div>
+                <div class="bg-white/80 backdrop-blur-sm p-4 rounded-2xl card-shadow flex items-center gap-3">
+                    <div class="w-8 h-8 md:w-10 md:h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-sm md:text-lg"><i class="fas fa-clock"></i></div>
+                    <div class="min-w-0"><p class="text-[9px] font-bold text-slate-400 uppercase">Talep</p><h3 id="statBekleyen" class="text-sm md:text-base font-black text-slate-800">0</h3></div>
+                </div>
+                <div class="bg-white/80 backdrop-blur-sm p-4 rounded-2xl card-shadow flex items-center gap-3">
+                    <div class="w-8 h-8 md:w-10 md:h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-sm md:text-lg"><i class="fas fa-bullhorn"></i></div>
+                    <div class="min-w-0"><p class="text-[9px] font-bold text-slate-400 uppercase">Duyuru</p><h3 id="statDuyuru" class="text-sm md:text-base font-black text-slate-800">0</h3></div>
+                </div>
+                <div class="bg-white/80 backdrop-blur-sm p-4 rounded-2xl card-shadow flex items-center gap-3">
+                    <div class="w-8 h-8 md:w-10 md:h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-sm md:text-lg"><i class="fas fa-file-invoice"></i></div>
+                    <div class="min-w-0"><p class="text-[9px] font-bold text-slate-400 uppercase">Belge</p><h3 id="statBelge" class="text-sm md:text-base font-black text-slate-800">0</h3></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-10">
+                <div class="lg:col-span-4 h-[400px] md:h-[450px] bg-white/80 backdrop-blur-sm rounded-[2rem] card-shadow overflow-hidden flex flex-col">
+                    <div class="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                        <span class="text-xs font-black text-slate-800 uppercase tracking-widest">Duyurular</span>
+                        <i class="fas fa-bullhorn text-indigo-500"></i>
+                    </div>
+                    <div id="duyuruListesi" class="p-4 space-y-4 overflow-y-auto flex-grow custom-scrollbar"></div>
+                </div>
+
+                <div class="lg:col-span-4 h-[400px] md:h-[450px] bg-white/80 backdrop-blur-sm rounded-[2rem] card-shadow overflow-hidden flex flex-col">
+                    <div class="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                        <span class="text-xs font-black text-slate-800 uppercase tracking-widest">Belgeler</span>
+                        <i class="fas fa-folder-open text-amber-500"></i>
+                    </div>
+                    <div id="sakinBelgeListesi" class="p-4 space-y-3 overflow-y-auto flex-grow custom-scrollbar"></div>
+                </div>
+
+                <div class="lg:col-span-4 h-[400px] md:h-[450px] bg-white/80 backdrop-blur-sm rounded-[2rem] card-shadow overflow-hidden flex flex-col">
+                    <div class="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                        <span class="text-xs font-black text-slate-800 uppercase tracking-widest">Taleplerim</span>
+                        <i class="fas fa-history text-slate-400"></i>
+                    </div>
+                    <div class="overflow-y-auto flex-grow custom-scrollbar">
+                        <table class="w-full text-left">
+                            <tbody id="talepListesi" class="divide-y divide-slate-50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="talepModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 id="modalBaslik" class="font-bold text-slate-800 text-xs uppercase tracking-widest">Talep Formu</h3>
+                <button onclick="talepModalKapat()" class="text-slate-400 hover:text-red-500 p-2"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <form id="modalForm" class="p-6 space-y-4">
+                <input type="hidden" id="hiddenKonu">
+                <textarea id="modalAciklama" rows="4" required class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="Detayları buraya yazınız..."></textarea>
+                <button type="submit" id="modalGonderBtn" class="w-full py-4 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 shadow-lg uppercase tracking-widest transition-all">TALEBİ GÖNDER</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="odemeModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden z-[110] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 md:px-8 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <div>
+                    <h3 class="font-black text-slate-800 text-sm uppercase tracking-widest">Güvenli Ödeme</h3>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Kart ile Online Ödeme</p>
+                </div>
+                <button onclick="odemeModaliKapat()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-50 text-slate-400 hover:text-red-500"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 md:p-8">
+                <div class="mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex justify-between items-center">
+                    <span class="text-xs font-bold text-indigo-600 uppercase">Ödenecek</span>
+                    <span id="modalOdenecekTutar" class="text-lg md:text-xl font-black text-indigo-700">₺0,00</span>
+                </div>
+                <form id="odemeFormu" class="space-y-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Kart Sahibi</label>
+                        <input type="text" id="cardName" required class="w-full p-3 md:p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-semibold" placeholder="AD SOYAD">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Kart Numarası</label>
+                        <input type="text" id="cardNumber" maxlength="19" required class="w-full p-3 md:p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-semibold" placeholder="**** **** **** ****">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Son Kullanma</label>
+                            <input type="text" id="cardExpiry" placeholder="AA/YY" maxlength="5" required class="w-full p-3 md:p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-semibold">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1">CVV</label>
+                            <input type="text" id="cardCVC" maxlength="3" required class="w-full p-3 md:p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-semibold" placeholder="***">
+                        </div>
+                    </div>
+                    <button type="submit" id="odemeTamamlaBtn" class="w-full py-4 bg-emerald-500 text-white text-xs font-black rounded-xl hover:bg-emerald-600 shadow-lg shadow-emerald-200 transition-all uppercase tracking-widest mt-4">
+                        ÖDEMEYİ TAMAMLA
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="makbuzModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[120] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden p-8 text-center">
+            <div class="w-16 h-16 md:w-20 md:h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl md:text-3xl"><i class="fas fa-check-double"></i></div>
+            <h3 class="text-lg md:text-xl font-black text-slate-800 mb-1 uppercase">ÖDEME ALINDI</h3>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-6">İşleminiz Onaylandı</p>
+            <div class="bg-slate-50 rounded-3xl p-6 mb-6 text-left space-y-3 border border-dashed border-slate-200">
+                <div class="flex justify-between text-[10px] uppercase font-black text-slate-400"><span>Referans:</span><span id="makbuzRef" class="text-slate-700">#000000</span></div>
+                <div class="flex justify-between text-[10px] uppercase font-black text-slate-400"><span>Tarih:</span><span id="makbuzTarih" class="text-slate-700">-</span></div>
+                <hr class="border-slate-200 border-dashed">
+                <div class="flex justify-between text-sm font-black text-slate-800"><span>TOPLAM:</span><span id="makbuzTutar" class="text-emerald-600">₺0,00</span></div>
+            </div>
+            <button onclick="makbuzKapat()" class="w-full py-4 bg-slate-900 text-white text-xs font-black rounded-2xl uppercase tracking-widest">PANELE DÖN</button>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-full bg-slate-900 text-white text-[10px] font-bold shadow-2xl transition-all opacity-0 pointer-events-none translate-y-10">
+        İşlem Başarılı
+    </div>
+
+    <script>
+        const formatTL = (v) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(v || 0);
+
+        document.addEventListener('DOMContentLoaded', () => { initPage(); });
+
+        async function initPage() {
+            loadUserData();
+            await Promise.allSettled([loadFinancials(), loadMyRequests(), loadDuyurular(), loadSakinBelgeler()]);
+        }
+
+     function loadUserData() {
+    // localStorage.setItem('fullName', ...) olarak kaydedildiği için buradan 'fullName' ile okuyoruz
+    const adSoyad = localStorage.getItem('fullName') || 'Sakin'; 
+    
+    document.getElementById('displayUserName').textContent = adSoyad;
+    
+    // Diğer bilgiler
+    document.getElementById('statDaire').textContent = localStorage.getItem('daire_no') || '-';
+    const site = localStorage.getItem('site_adi') || 'Pia Yönetim';
+    const blok = localStorage.getItem('blok_adi') || '-';
+    const daire = localStorage.getItem('daire_no') || '-';
+    document.getElementById('displayUserInfo').innerHTML = `<i class="fas fa-map-marker-alt text-indigo-500 mr-1"></i> ${site} • ${blok} BLOK • NO ${daire}`;
+}
+
+        async function loadFinancials() {
+            const uid = localStorage.getItem('userId');
+            if(!uid) return;
+            try {
+                const [borcRes, odemeRes] = await Promise.all([
+                    fetch(`/api/sakin-borclar/${uid}`),
+                    fetch(`/api/sakin-odemeler/${uid}`)
+                ]);
+                const borclar = borcRes.ok ? await borcRes.json() : [];
+                const odemeler = odemeRes.ok ? await odemeRes.json() : [];
+                
+                let aidat = 0, demirbas = 0, yakit = 0, toplamOdenen = 0, toplamTahakkuk = 0;
+                
+                borclar.forEach(b => {
+                    const tur = (b.tur || "").toLocaleLowerCase('tr-TR');
+                    const miktar = parseFloat(b.miktar) || 0;
+                    toplamTahakkuk += miktar;
+                    if(tur.includes('aidat')) aidat += miktar;
+                    else if(tur.includes('demirba')) demirbas += miktar;
+                    else if(tur.includes('yakıt') || tur.includes('yakit')) yakit += miktar;
+                });
+
+                odemeler.forEach(o => { toplamOdenen += parseFloat(o.miktar) || 0; });
+                const netBorc = Math.max(0, toplamTahakkuk - toplamOdenen);
+                
+                document.getElementById('borcAidat').textContent = formatTL(aidat);
+                document.getElementById('borcDemirbas').textContent = formatTL(demirbas);
+                document.getElementById('borcYakit').textContent = formatTL(yakit);
+                document.getElementById('borcToplam').textContent = formatTL(netBorc);
+                document.getElementById('toplamBorcHeader').textContent = formatTL(netBorc);
+                document.getElementById('toplamOdeme').textContent = formatTL(toplamOdenen);
+                document.getElementById('toplamBorcHeader').className = netBorc > 0 ? "text-lg font-black text-red-500" : "text-lg font-black text-emerald-500";
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadDuyurular() {
+            try {
+                const res = await fetch('/api/duyurular');
+                const data = await res.json();
+                const bugun = new Date().toDateString();
+                document.getElementById('statDuyuru').textContent = data.length;
+                document.getElementById('duyuruListesi').innerHTML = data.map(x => {
+                    const isToday = new Date(x.tarih).toDateString() === bugun;
+                    return `
+                    <div class="p-4 rounded-2xl border ${isToday ? 'new-item-border' : 'border-slate-100'} bg-white group relative">
+                        ${isToday ? '<div class="absolute -top-2 -left-2"><span class="new-badge-pulse">YENİ</span></div>' : ''}
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-slate-800 text-sm group-hover:text-indigo-600">${x.baslik}</span>
+                            <span class="text-[10px] text-slate-400 font-bold">${new Date(x.tarih).toLocaleDateString('tr-TR')}</span>
+                        </div>
+                        <p class="text-xs text-slate-500 leading-relaxed">${x.icerik}</p>
+                    </div>`;
+                }).join('') || '<p class="text-center text-slate-400 text-xs py-10">Duyuru bulunmuyor.</p>';
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadSakinBelgeler() {
+            try {
+                const res = await fetch('/api/belgeler');
+                const data = await res.json();
+                const yayinlananlar = data.filter(b => b.is_public);
+                document.getElementById('statBelge').textContent = yayinlananlar.length;
+                document.getElementById('sakinBelgeListesi').innerHTML = yayinlananlar.map(b => `
+                    <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-50 bg-slate-50/30 hover:bg-white hover:border-amber-100 transition-all group">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="shrink-0 w-9 h-9 bg-white rounded-xl flex items-center justify-center text-amber-500 border border-slate-100"><i class="fas fa-file-alt"></i></div>
+                            <div class="overflow-hidden">
+                                <h4 class="text-xs font-bold text-slate-700 truncate">${b.baslik}</h4>
+                                <span class="text-[9px] text-slate-400 font-bold uppercase">${b.kategori}</span>
+                            </div>
+                        </div>
+                        <button onclick="window.open('${b.dosya_yolu}', '_blank')" class="shrink-0 w-8 h-8 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white transition-all ml-2"><i class="fas fa-eye text-xs"></i></button>
+                    </div>`).join('') || '<p class="text-center text-slate-400 text-xs py-10">Belge bulunmuyor.</p>';
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadMyRequests() {
+            const uid = localStorage.getItem('userId');
+            if(!uid) return;
+            try {
+                const res = await fetch(`/api/taleplerim/${uid}`);
+                const data = await res.json();
+                document.getElementById('statBekleyen').textContent = data.filter(x => x.durum === 'Bekliyor').length;
+                document.getElementById('talepListesi').innerHTML = data.map(x => `
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="px-5 py-4 min-w-0">
+                            <div class="font-bold text-slate-700 text-xs uppercase truncate max-w-[120px] md:max-w-none">${x.konu}</div>
+                            <div class="text-[10px] text-slate-400 truncate max-w-[150px]">${x.aciklama}</div>
+                        </td>
+                        <td class="px-5 py-4 text-right">
+                            <span class="px-2.5 py-1 rounded-lg text-[9px] font-black whitespace-nowrap ${x.durum === 'Bekliyor' ? 'bg-orange-50 text-orange-500' : 'bg-emerald-50 text-emerald-600'}">${x.durum.toUpperCase()}</span>
+                        </td>
+                    </tr>`).join('') || '<tr><td colspan="2" class="p-10 text-center text-slate-400 text-xs">Henüz talebiniz yok.</td></tr>';
+            } catch(e) { console.error(e); }
+        }
+
+        function toggleSidebar() { 
+            const sb = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sb.classList.toggle('-translate-x-full'); 
+            overlay.classList.toggle('active');
+        }
+
+        function talepModalAc(konu) { 
+            document.getElementById('modalBaslik').innerText = konu;
+            document.getElementById('hiddenKonu').value = konu;
+            document.getElementById('talepModal').classList.remove('hidden'); 
+        }
+        function talepModalKapat() { document.getElementById('talepModal').classList.add('hidden'); }
+        
+        function odemeModaliAc() { 
+            document.getElementById('modalOdenecekTutar').textContent = document.getElementById('borcToplam').textContent;
+            
+            // AD SOYAD BİLGİSİNİ ÖDEME FORMUNA OTOMATİK DOLDUR
+            const adSoyad = localStorage.getItem('userName') || '';
+            document.getElementById('cardName').value = adSoyad;
+            
+            document.getElementById('odemeModal').classList.remove('hidden'); 
+        }
+        function odemeModaliKapat() { document.getElementById('odemeModal').classList.add('hidden'); }
+        function makbuzKapat() { document.getElementById('makbuzModal').classList.add('hidden'); }
+        
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.remove('opacity-0', 'translate-y-10');
+            setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
+        }
+
+        document.getElementById('cardNumber')?.addEventListener('input', e => {
+            let v = e.target.value.replace(/\D/g, '').slice(0, 16);
+            e.target.value = v.match(/.{1,4}/g)?.join(' ') || '';
+        });
+
+        document.getElementById('odemeFormu').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('odemeTamamlaBtn');
+            const tutar = document.getElementById('modalOdenecekTutar').textContent;
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> İŞLENİYOR...';
+            
+            setTimeout(() => {
+                document.getElementById('makbuzTutar').textContent = tutar;
+                document.getElementById('makbuzTarih').textContent = new Date().toLocaleDateString('tr-TR');
+                document.getElementById('makbuzRef').textContent = '#' + Math.floor(Math.random()*900000+100000);
+                odemeModaliKapat();
+                document.getElementById('makbuzModal').classList.remove('hidden');
+                btn.disabled = false; btn.textContent = "ÖDEMEYİ TAMAMLA";
+                loadFinancials();
+            }, 2000);
+        };
+
+        document.getElementById('modalForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('modalGonderBtn');
+            btn.disabled = true; btn.textContent = "GÖNDERİLİYOR...";
+            try {
+                const res = await fetch('/api/talepler', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        userId: localStorage.getItem('userId'),
+                        konu: document.getElementById('hiddenKonu').value,
+                        aciklama: document.getElementById('modalAciklama').value
+                    })
+                });
+                if(res.ok) { 
+                    talepModalKapat(); 
+                    loadMyRequests(); 
+                    showToast("Talebiniz iletildi."); 
+                    document.getElementById('modalAciklama').value = "";
+                }
+            } finally { btn.disabled = false; btn.textContent = "TALEBİ GÖNDER"; }
+        };
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+    </script>
+</body>
+</html>

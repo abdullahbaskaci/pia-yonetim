@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pia Yönetim | Belge Arşivi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.01em; }
+        
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+
+        .file-row { transition: all 0.2s ease; }
+        .file-row:hover { background-color: #f8fafc; }
+        
+        .modal-animate { animation: modalFadeIn 0.3s ease-out; }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        /* Admin olmayanlara gizlenecek öğeler için */
+        .admin-only { display: none; }
+    </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-900 overflow-hidden">
+
+    <div id="successToast" class="fixed top-5 right-5 transform translate-x-[120%] transition-transform duration-500 z-[100]">
+        <div class="bg-emerald-500 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-4 border border-white/20 backdrop-blur-md">
+            <div class="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center text-lg"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <h4 class="font-black text-sm uppercase tracking-widest leading-none">İşlem Başarılı</h4>
+                <p id="toastMessage" class="text-[10px] opacity-90 mt-1 font-bold">Veriler güncellendi.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-[70] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden modal-animate p-8 text-center">
+            <div id="messageIcon" class="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4"></div>
+            <h3 id="messageTitle" class="text-lg font-black text-slate-800 mb-2"></h3>
+            <p id="messageText" class="text-slate-500 text-xs mb-6 font-medium"></p>
+            <button onclick="closeMessageModal()" class="w-full py-3 bg-slate-900 text-white font-black rounded-xl text-xs uppercase tracking-widest">Tamam</button>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden modal-animate p-8 text-center">
+            <div id="confirmIcon" class="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-6">
+                <i class="fas fa-question"></i>
+            </div>
+            <h3 id="confirmTitle" class="text-xl font-black text-slate-800 mb-2">Emin misiniz?</h3>
+            <p id="confirmText" class="text-slate-500 text-sm mb-8 font-medium"></p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirmModal()" class="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-2xl hover:bg-slate-200 transition-all text-xs uppercase tracking-widest">Vazgeç</button>
+                <button id="confirmBtn" class="flex-1 py-4 text-white font-black rounded-2xl shadow-lg transition-all text-xs uppercase tracking-widest">Onayla</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10">
+                <div class="flex items-center gap-6">
+                    <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">Belge & Fatura Arşivi</h2>
+                    <button onclick="modalAc()" class="admin-only bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-[10px] font-black transition-all shadow-lg shadow-indigo-500/20 uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-cloud-upload-alt text-base"></i> Yeni Belge Yükle
+                    </button>
+                </div>
+            </header>
+
+            <div class="p-8 overflow-y-auto bg-[#f8fafc] space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+                        <select id="filterKategori" onchange="filtrele()" class="w-full p-2 bg-transparent text-[11px] font-black text-slate-500 uppercase tracking-widest outline-none cursor-pointer">
+                            <option value="">Tüm Kategoriler</option>
+                            <option value="Fatura">Fatura</option>
+                            <option value="Sözleşme">Sözleşme</option>
+                            <option value="Dekont">Ödeme Dekontu</option>
+                            <option value="Resmi Evrak">Resmi Evrak</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center px-4">
+                        <i class="fas fa-search text-slate-400 mr-3"></i>
+                        <input type="text" id="searchInput" onkeyup="filtrele()" placeholder="Belge adı veya açıklama ile ara..." class="w-full bg-transparent text-xs font-bold text-slate-600 outline-none">
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50/50 border-b border-slate-100">
+                            <tr>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tarih / Durum</th>
+                                <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Belge Detayı</th>
+                                <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Tutar</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="belgeGrid" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="uploadModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl overflow-hidden modal-animate">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="text-xl font-black text-slate-800 tracking-tight">Yeni Belge Arşivle</h3>
+                <button onclick="modalKapat()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white shadow-sm text-slate-400 hover:text-red-500 transition-all border border-slate-100"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="belgeForm" class="p-8 space-y-5">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Kategori</label>
+                        <select id="kategori" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm">
+                            <option>Fatura</option>
+                            <option>Sözleşme</option>
+                            <option>Dekont</option>
+                            <option>Resmi Evrak</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Tarih*</label>
+                        <input type="date" id="tarih" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Belge Başlığı*</label>
+                    <input type="text" id="baslik" required placeholder="Belge adını yazın..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Açıklama</label>
+                    <textarea id="aciklama" rows="2" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Tutar</label>
+                        <input type="number" id="tutar" placeholder="0.00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Dosya*</label>
+                        <input type="file" id="dosya" onchange="fileUpdateLabel(this)" class="hidden">
+                        <label for="dosya" id="fileNameLabel" class="w-full p-3 bg-white border-2 border-dashed border-indigo-200 rounded-xl text-[10px] font-bold text-indigo-600 text-center cursor-pointer block truncate uppercase">DOSYA SEÇ</label>
+                    </div>
+                </div>
+                <button type="button" onclick="belgeKaydet()" class="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-700 transition-all uppercase tracking-widest text-xs">SİSTEME KAYDET</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const userRole = localStorage.getItem('userRole');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Admin kontrollerini yap
+            if (userRole === 'admin') {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+            }
+            loadBelgeler();
+        });
+
+        function modalAc() { document.getElementById('uploadModal').classList.remove('hidden'); }
+        function modalKapat() { 
+            document.getElementById('uploadModal').classList.add('hidden');
+            document.getElementById('belgeForm').reset();
+            document.getElementById('fileNameLabel').innerText = "DOSYA SEÇ";
+        }
+
+        async function loadBelgeler() {
+            const container = document.getElementById('belgeGrid');
+            try {
+                const response = await fetch('/api/belgeler');
+                let belgeler = await response.json();
+                
+                // Sakinler sadece yayınlanmış belgeleri görsün
+                if (userRole !== 'admin') {
+                    belgeler = belgeler.filter(b => b.is_public == 1);
+                }
+
+                belgeler.sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
+
+                container.innerHTML = belgeler.length ? '' : '<tr><td colspan="4" class="text-center py-20 text-slate-400 italic font-medium">Görüntülenecek belge bulunmuyor.</td></tr>';
+                
+                belgeler.forEach(b => {
+                    container.innerHTML += createRowHTML(b);
+                });
+            } catch (err) { 
+                container.innerHTML = '<tr><td colspan="4" class="text-center text-red-500 py-10 font-bold">Veriler yüklenemedi!</td></tr>'; 
+            }
+        }
+
+        function createRowHTML(b) {
+            const tarih = new Date(b.tarih).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
+            const tutar = b.tutar ? `₺${parseFloat(b.tutar).toLocaleString('tr-TR', {minimumFractionDigits: 2})}` : '---';
+            const isPublic = b.is_public == 1;
+
+            // Yayın durumu buton ayarları
+            const publishBtnText = isPublic ? 'YAYINDAN KALDIR' : 'YAYINLA';
+            const publishBtnClass = isPublic 
+                ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-100' 
+                : 'bg-red-50 text-red-600 border-red-100 hover:bg-red-600 hover:text-white';
+
+            // Admin kontrolleri (Sil ve Yayınla butonları sadece adminde görünür)
+            const adminActions = userRole === 'admin' ? `
+                <button onclick="toggleDuyuru(${b.id}, ${b.is_public})" 
+                        class="px-4 py-2 rounded-xl border text-[9px] font-black transition-all duration-200 tracking-widest ${publishBtnClass}">
+                    ${publishBtnText}
+                </button>
+                <button onclick="silmeOnayı(${b.id})" 
+                        class="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 border border-slate-200 hover:bg-red-500 hover:text-white text-[9px] font-black transition-all duration-200 tracking-widest">
+                    BELGE SİL
+                </button>
+            ` : '';
+
+            return `
+                <tr class="file-row group hover:bg-slate-50 transition-colors" data-kategori="${b.kategori}">
+                    <td class="px-8 py-5">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-black text-slate-800">${tarih}</span>
+                            <div class="mt-1">
+                                ${isPublic ? 
+                                    `<span class="text-[8px] font-black text-emerald-500 flex items-center gap-1 uppercase">
+                                        <span class="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></span> Yayında
+                                    </span>` : 
+                                    `<span class="text-[8px] font-black text-slate-300 uppercase italic">Arşivde</span>`
+                                }
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-bold text-slate-700 truncate max-w-[250px]">${b.baslik}</span>
+                            <span class="text-[9px] font-black text-indigo-500/70 uppercase tracking-widest mt-0.5">${b.kategori}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5 text-right font-black text-slate-700 text-sm">
+                        ${tutar}
+                    </td>
+                    <td class="px-8 py-5 text-right">
+                        <div class="flex justify-end items-center gap-2">
+                            ${adminActions}
+                            <button onclick="window.open('${b.dosya_yolu}')" 
+                                    class="px-4 py-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-600 hover:text-white text-[9px] font-black transition-all duration-200 tracking-widest">
+                                BELGE GÖRÜNTÜLE
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+        }
+
+        // --- Fonksiyonlar ---
+        async function toggleDuyuru(id, currentStatus) {
+            const nextStatus = currentStatus == 1 ? 0 : 1;
+            const text = nextStatus ? "Belgeyi duyurular panelinde yayınlamak istiyor musunuz?" : "Belgeyi duyurulardan kaldırmak istiyor musunuz?";
+            showConfirm("Duyuru Durumu", text, "bg-indigo-600 hover:bg-indigo-700", async () => {
+                try {
+                    const res = await fetch(`/api/belgeler/${id}/yayin-durumu`, {
+                        method: 'PATCH',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ is_public: nextStatus })
+                    });
+                    if(res.ok) { showToast(nextStatus ? "Yayınlandı" : "Kaldırıldı"); loadBelgeler(); }
+                } catch (err) { showMsg("Hata", "İşlem başarısız."); }
+            });
+        }
+
+        function silmeOnayı(id) {
+            showConfirm("Siliniyor", "Bu belge kalıcı olarak silinecek. Emin misiniz?", "bg-red-500 hover:bg-red-600", async () => {
+                try {
+                    const res = await fetch(`/api/belgeler/${id}`, { method: 'DELETE' });
+                    if(res.ok) { showToast("Silindi"); loadBelgeler(); }
+                } catch (err) { showMsg("Hata", "Silinemedi."); }
+            });
+        }
+
+        async function belgeKaydet() {
+            const fileInput = document.getElementById('dosya');
+            if (!document.getElementById('baslik').value || !document.getElementById('tarih').value || !fileInput.files[0]) {
+                showMsg("Eksik Alan", "Lütfen tüm zorunlu alanları doldurun."); return;
+            }
+            const formData = new FormData();
+            formData.append('baslik', document.getElementById('baslik').value);
+            formData.append('kategori', document.getElementById('kategori').value);
+            formData.append('tarih', document.getElementById('tarih').value);
+            formData.append('tutar', document.getElementById('tutar').value);
+            formData.append('aciklama', document.getElementById('aciklama').value);
+            formData.append('belge', fileInput.files[0]);
+
+            try {
+                const res = await fetch('/api/belgeler', { method: 'POST', body: formData });
+                if(res.ok) { modalKapat(); loadBelgeler(); showToast("Arşivlendi"); }
+            } catch (err) { showMsg("Hata", "Yükleme başarısız."); }
+        }
+
+        function filtrele() {
+            const cat = document.getElementById('filterKategori').value.toLowerCase();
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('.file-row');
+            rows.forEach(row => {
+                const rowCat = row.getAttribute('data-kategori').toLowerCase();
+                const text = row.innerText.toLowerCase();
+                row.style.display = (cat === "" || rowCat === cat) && text.includes(search) ? "table-row" : "none";
+            });
+        }
+
+        function fileUpdateLabel(input) {
+            const label = document.getElementById('fileNameLabel');
+            if(input.files[0]) { label.innerText = input.files[0].name; label.classList.add('border-indigo-600'); }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('successToast');
+            document.getElementById('toastMessage').innerText = msg;
+            t.classList.remove('translate-x-[120%]');
+            setTimeout(() => t.classList.add('translate-x-[120%]'), 3000);
+        }
+
+        function showMsg(title, text, type = 'error') {
+            const modal = document.getElementById('messageModal');
+            document.getElementById('messageTitle').innerText = title;
+            document.getElementById('messageText').innerText = text;
+            modal.classList.remove('hidden');
+        }
+        function closeMessageModal() { document.getElementById('messageModal').classList.add('hidden'); }
+
+        function showConfirm(title, text, btnClass, callback) {
+            const modal = document.getElementById('confirmModal');
+            document.getElementById('confirmTitle').innerText = title;
+            document.getElementById('confirmText').innerText = text;
+            const btn = document.getElementById('confirmBtn');
+            btn.className = `flex-1 py-4 text-white font-black rounded-2xl shadow-lg transition-all text-xs uppercase tracking-widest ${btnClass}`;
+            btn.onclick = () => { callback(); closeConfirmModal(); };
+            modal.classList.remove('hidden');
+        }
+        function closeConfirmModal() { document.getElementById('confirmModal').classList.add('hidden'); }
+    </script>
+</body>
+</html>

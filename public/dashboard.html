@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <script>
+    // Sayfa içeriği yüklenmeden önce yetkiyi kontrol et
+    const userRole = localStorage.getItem('userRole');
+    
+    // Eğer hiç giriş yapılmamışsa giriş sayfasına at
+    if (!userRole) {
+        window.location.href = 'index.html'; // Giriş sayfanızın adı
+    }
+    
+    // Opsiyonel: Admin bu sayfaya girmeye çalışırsa onu kendi paneline yönlendir
+    if (userRole.toLowerCase() === 'admin') {
+        window.location.href = 'Anasayfa.html';
+    }
+</script>
+  <meta charset="UTF-8">
+  <title>Admin Panel</title>
+</head>
+<body>
+  <h1>Admin Dashboard</h1>
+  <p>Hoş geldin Admin</p>
+</body>
+</html>
