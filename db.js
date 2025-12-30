@@ -1,9 +1,10 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
+    // Bu satır Render'daki DATABASE_URL değişkenini okur
     connectionString: process.env.DATABASE_URL,
     ssl: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false // Uzak sunucu bağlantısı için şarttır
     }
 });
 
